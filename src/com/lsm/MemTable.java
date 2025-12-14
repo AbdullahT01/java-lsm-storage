@@ -28,23 +28,27 @@ public class MemTable {
     }
 
     public String get(String key){
-        if(table.get(key) != null){
-
+        long startTime = System.nanoTime();
+        String result = table.get(key);
+        if(result != null){
             System.out.println("found the value in the memtable");
-            return table.get(key);
         }
         else{
             for(int i = segmentID - 1; i >= 0; i--){
                 String fileName = "data-" + i + ".sst";
-                String result = getValue(fileName, key);
+                result = getValue(fileName, key);
 
                 if(result != null){
                     System.out.println("found the value in sst table: " + fileName);
-                    return result;
+                    break;
                 }
             }
         }
-        return null;
+        long endTime = System.nanoTime();
+        float durationInMs = ((endTime) - startTime)/ 1000000.0f;
+        System.out.println();
+        System.out.println("Time to retrieve value ---> " + durationInMs + "ms");
+        return result;
     }
 
     public void flush() {
