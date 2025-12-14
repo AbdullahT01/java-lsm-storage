@@ -1,11 +1,12 @@
 package com.lsm;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.TreeMap;
-
-import static com.lsm.SSTable.getValue;
 
 public class MemTable {
     private final TreeMap<String, String> table;
     private int currentByteSize;
+    private final List<SSTable> sstables = new ArrayList<>();
     private static int segmentID = 0;
 
     private static final int MEMTABLE_BYTE_LIMIT = 4096;
@@ -34,12 +35,11 @@ public class MemTable {
             System.out.println("found the value in the memtable");
         }
         else{
-            for(int i = segmentID - 1; i >= 0; i--){
-                String fileName = "data-" + i + ".sst";
-                result = getValue(fileName, key);
+            for(int i = sstables.size() - 1; i >= 0; i--){
+                result = sstables.get(i).getValue(key);
 
                 if(result != null){
-                    System.out.println("found the value in sst table: " + fileName);
+                    System.out.println("found the value in sst table: ");
                     break;
                 }
             }
@@ -54,10 +54,12 @@ public class MemTable {
     public void flush() {
         System.out.println("We hit the limit for this MemTable, will now flush!");
 
-        // creating the file using the createSSTable function
+        // creating the file using the createSSTable function and adding it to our sst list
         String fileName = "data-" + segmentID + ".sst";
-        SSTable sst = new SSTable();
-        sst.createSSTable(table, fileName);
+        SSTable sst = new SSTable(fileName);
+        sstables.add(sst);
+
+        sst.createSSTable(table);
         sst.readSSTable(fileName);
 
         table.clear();

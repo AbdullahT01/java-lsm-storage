@@ -1,28 +1,51 @@
 package com.lsm;
-import java.io.BufferedOutputStream;
-import java.io.DataOutputStream;
-import java.io.FileOutputStream;
-import java.io.BufferedInputStream;
-import java.io.DataInputStream;
-import java.io.FileInputStream;
-import java.io.IOException;
+import java.io.*;
 import java.util.TreeMap;
 
 public class SSTable {
 
-    public void createSSTable(TreeMap<String,String> data, String fileName){
+    private TreeMap<String, Long> sparseIndex = new TreeMap<>();
+    private String fileName;
+    private static final int SPARSE_INDEX_OFFSET = 256;
+
+    public SSTable(String fileName){
+        this.fileName = fileName;
+    }
+
+    public void createSSTable(TreeMap<String,String> data){
         try(
                 FileOutputStream fos = new FileOutputStream(fileName);
                 BufferedOutputStream bos = new BufferedOutputStream(fos);
                 DataOutputStream dos = new DataOutputStream(bos);
         )
         {
+                long currentOffset = 0;      // Total bytes written to file
+                long currentBlockSize = 0;   // Bytes written in THIS block
                 for(var entry : data.entrySet()){
+
                     String key = entry.getKey();
                     String value = entry.getValue();
 
+                    // 1. Snapshot the stream size BEFORE writing
+                    int startSize = dos.size();
+
+                    if (currentBlockSize == 0) {
+                        sparseIndex.put(key, currentOffset);
+                    }
+
                     dos.writeUTF(key);
                     dos.writeUTF(value);
+
+                    // 4. Calculate exact bytes written
+                    int endSize = dos.size();
+                    int bytesWritten = endSize - startSize;
+
+                    currentOffset += bytesWritten;
+                    currentBlockSize += bytesWritten;
+
+                    if (currentBlockSize >= SPARSE_INDEX_OFFSET) {
+                        currentBlockSize = 0;
+                    }
                 }
 
         } catch (IOException e) {
@@ -50,21 +73,30 @@ public class SSTable {
         }
     }
 
-    public static String getValue(String fileName, String key){
+    public String getValue(String key){
         try(
-                FileInputStream fis = new FileInputStream(fileName);
-                BufferedInputStream bis = new BufferedInputStream(fis);
-                DataInputStream dis = new DataInputStream(bis);
+                RandomAccessFile raf = new RandomAccessFile(fileName, "r");
         ){
-                while (dis.available() > 0){
-                    String currentKey = dis.readUTF();
+                String closestKey = sparseIndex.floorKey(key);
+                if (closestKey == null) {
+                    return null; // The key is smaller than the first item in the file, so it doesn't exist.
+                }
+                long offset = sparseIndex.get(closestKey);
 
-                    if(currentKey.equals(key)){
-                        return dis.readUTF();
+                raf.seek(offset);
+
+                while (raf.getFilePointer() < raf.length()) {
+                    String currentKey = raf.readUTF();
+                    String currentValue = raf.readUTF();
+
+                    if (currentKey.equals(key)) {
+                        return currentValue;
                     }
 
-                    // skip the value because we are searching for keys
-                    dis.readUTF();
+                    // Optimization: If we passed the key, stop.
+                    if (currentKey.compareTo(key) > 0) {
+                        return null;
+                    }
                 }
         } catch (IOException e) {
             throw new RuntimeException(e);
