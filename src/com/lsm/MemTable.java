@@ -1,6 +1,8 @@
 package com.lsm;
 import java.util.TreeMap;
 
+import static com.lsm.SSTable.getValue;
+
 public class MemTable {
     private final TreeMap<String, String> table;
     private int currentByteSize;
@@ -26,7 +28,23 @@ public class MemTable {
     }
 
     public String get(String key){
-        return table.get(key);
+        if(table.get(key) != null){
+
+            System.out.println("found the value in the memtable");
+            return table.get(key);
+        }
+        else{
+            for(int i = segmentID - 1; i >= 0; i--){
+                String fileName = "data-" + i + ".sst";
+                String result = getValue(fileName, key);
+
+                if(result != null){
+                    System.out.println("found the value in sst table: " + fileName);
+                    return result;
+                }
+            }
+        }
+        return null;
     }
 
     public void flush() {

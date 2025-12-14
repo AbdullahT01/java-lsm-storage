@@ -49,4 +49,26 @@ public class SSTable {
             throw new RuntimeException(e);
         }
     }
+
+    public static String getValue(String fileName, String key){
+        try(
+                FileInputStream fis = new FileInputStream(fileName);
+                BufferedInputStream bis = new BufferedInputStream(fis);
+                DataInputStream dis = new DataInputStream(bis);
+        ){
+                while (dis.available() > 0){
+                    String currentKey = dis.readUTF();
+
+                    if(currentKey.equals(key)){
+                        return dis.readUTF();
+                    }
+
+                    // skip the value because we are searching for keys
+                    dis.readUTF();
+                }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return null;
+    }
 }

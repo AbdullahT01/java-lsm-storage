@@ -15,6 +15,9 @@ public class Main {
             db.put(key, value);
         }
 
+        String testingGetFunction = db.get("user_1");
+        System.out.println(testingGetFunction);
+
         System.out.println("Done.");
     }
 }
