@@ -7,7 +7,7 @@ public class Main {
         System.out.println("Writing data to trigger a flush...");
 
         // Loop to fill up the 4KB limit
-        for (int i = 0; i < 400; i++) {
+        for (int i = 0; i < 5000; i++) {
 
             String key = "user_" + i;
             String value = "data_payload_" + i;
@@ -15,7 +15,8 @@ public class Main {
             db.put(key, value);
         }
 
-        String testingGetFunction = db.get("user_1");
+        //db.put("user_1598", "testing new data");
+        String testingGetFunction = db.get("user_1598");
         System.out.println(testingGetFunction);
 
         System.out.println("Done.");

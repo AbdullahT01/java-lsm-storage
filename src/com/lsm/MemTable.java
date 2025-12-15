@@ -32,6 +32,7 @@ public class MemTable {
         long startTime = System.nanoTime();
         String result = table.get(key);
         if(result != null){
+
             System.out.println("found the value in the memtable");
         }
         else{

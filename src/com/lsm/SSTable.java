@@ -6,6 +6,7 @@ public class SSTable {
 
     private TreeMap<String, Long> sparseIndex = new TreeMap<>();
     private String fileName;
+    private BloomFilter bloomFilter;
     private static final int SPARSE_INDEX_OFFSET = 256;
 
     public SSTable(String fileName){
@@ -13,6 +14,8 @@ public class SSTable {
     }
 
     public void createSSTable(TreeMap<String,String> data){
+        // creating the bloom filter here since we know about the size of the data
+        this.bloomFilter = new BloomFilter(data.size());
         try(
                 FileOutputStream fos = new FileOutputStream(fileName);
                 BufferedOutputStream bos = new BufferedOutputStream(fos);
@@ -46,6 +49,9 @@ public class SSTable {
                     if (currentBlockSize >= SPARSE_INDEX_OFFSET) {
                         currentBlockSize = 0;
                     }
+
+                    // adding the value to the bloom filter for this specific file
+                    bloomFilter.add(key);
                 }
 
         } catch (IOException e) {
@@ -74,6 +80,11 @@ public class SSTable {
     }
 
     public String getValue(String key){
+        // return null immediately if bloomfilter says so
+        if (!bloomFilter.mightContain(key)){
+            return null;
+        }
+
         try(
                 RandomAccessFile raf = new RandomAccessFile(fileName, "r");
         ){
@@ -81,6 +92,7 @@ public class SSTable {
                 if (closestKey == null) {
                     return null; // The key is smaller than the first item in the file, so it doesn't exist.
                 }
+
                 long offset = sparseIndex.get(closestKey);
 
                 raf.seek(offset);
