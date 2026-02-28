@@ -43,17 +43,25 @@ public class MemTable {
     String result = table.get(key);
     if (result != null) {
 
+      if (result.equals("TOMBSTONE")) {
+        System.out.println("value is not inside the database");
+        return null;
+      } else {
+        System.out.println("Value was found");
+      }
+
       System.out.println("found the value in the memtable");
     } else {
       for (int i = sstables.size() - 1; i >= 0; i--) {
         result = sstables.get(i).getValue(key);
 
-        if (result != null) {
+        if (result != null && !result.equals("TOMBSTONE")) {
           System.out.println("found the value in sst table: ");
           break;
         }
       }
     }
+
     long endTime = System.nanoTime();
     float durationInMs = ((endTime) - startTime) / 1000000.0f;
     System.out.println();
@@ -78,6 +86,12 @@ public class MemTable {
     segmentID++;
 
     System.out.println("flush has been complete");
+  }
+
+  // Simple function, associate value TOMBSTONE
+  // any value with TOMBSTONE will be considered as deleted
+  public void delete(String key) {
+    put(key, "TOMBSTONE");
   }
 
   public void startUpRecovery() {

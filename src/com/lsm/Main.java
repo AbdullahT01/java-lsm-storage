@@ -16,7 +16,10 @@ public class Main {
     }
     // Testinng to see if db can handle startUp recovery by checking
     // retreival of formar segmentID
-    System.out.println("retreiving current segmentID --> " + db.getSegmentID());
+    // System.out.println("retreiving current segmentID --> " + db.getSegmentID());
+
+    // Testing deletion functionanility
+    db.delete("user_1598");
 
     // db.put("user_1598", "testing new data");
     String testingGetFunction = db.get("user_1598");
