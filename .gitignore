@@ -3,7 +3,7 @@
 
 # int file
 .idea
-
+*.sst
 # Log file
 *.log
 
