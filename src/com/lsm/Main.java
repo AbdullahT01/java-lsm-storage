@@ -1,30 +1,61 @@
 package com.lsm;
 
+import java.util.Scanner;
+
 public class Main {
   public static void main(String[] args) {
     MemTable db = new MemTable();
 
-    System.out.println("Writing data to trigger a flush...");
+    Scanner scanner = new Scanner(System.in);
 
-    // Loop to fill up the 4KB limit
-    for (int i = 0; i < 2000; i++) {
+    System.out.println("Custom database has started!");
+    System.out.println("Please choose among the available options");
+    System.out.println("*****************************************");
+    System.out.println("* 1. PUT                                *");
+    System.out.println("* 2. GET                                *");
+    System.out.println("* 3. DELETE                             *");
+    System.out.println("* 4. STOP                               *");
+    System.out.println("*****************************************");
 
-      String key = "user_" + i;
-      String value = "data_payload_" + i;
+    boolean firstCommandFlag = false;
+    while (true) {
 
-      db.put(key, value);
+      if (firstCommandFlag)
+        System.out.println("Choose another command");
+      firstCommandFlag = true;
+
+      String command = scanner.nextLine();
+
+      switch (command.toUpperCase()) {
+        case "PUT":
+          System.out.println("Please input key");
+          String key = scanner.nextLine();
+
+          System.out.println("Please input value associated with your key");
+          String value = scanner.nextLine();
+
+          db.put(key, value);
+          break;
+        case "GET":
+          System.out.println("What value do you want to retreive, please input a key");
+          String getKey = scanner.nextLine();
+
+          String result = db.get(getKey);
+          System.out.println("value ----> " + result);
+          break;
+        case "DELETE":
+          System.out.println("What value do you want to delete. please give a key");
+          String deleteKey = scanner.nextLine();
+
+          db.delete(deleteKey);
+          break;
+        case "STOP":
+          db.flush();
+          scanner.close();
+          return;
+        default:
+          System.out.println("Invalid command, please choose one of the given options");
+      }
     }
-    // Testinng to see if db can handle startUp recovery by checking
-    // retreival of formar segmentID
-    // System.out.println("retreiving current segmentID --> " + db.getSegmentID());
-
-    // Testing deletion functionanility
-    db.delete("user_1598");
-
-    // db.put("user_1598", "testing new data");
-    String testingGetFunction = db.get("user_1598");
-    System.out.println(testingGetFunction);
-
-    System.out.println("Done.");
   }
 }

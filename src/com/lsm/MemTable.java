@@ -102,6 +102,7 @@ public class MemTable {
     for (File file : allFiles) {
       if (file.getName().endsWith(".sst")) {
         SSTable sst = new SSTable(file.getName());
+        sst.loadFromDisk();
         sstables.add(sst);
 
         // figure out current segmentID

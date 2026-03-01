@@ -1,6 +1,9 @@
 package com.lsm;
 
+import java.util.List;
 import java.io.*;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.TreeMap;
 
 public class SSTable {
@@ -110,4 +113,65 @@ public class SSTable {
     }
     return null;
   }
-}
+
+  // Function to go ahead and rebuild bloom filter and sparseIndex (used for start
+  // up recovery)
+  public void loadFromDisk() {
+    try (
+        FileInputStream fis = new FileInputStream(fileName);
+        BufferedInputStream bis = new BufferedInputStream(fis);
+        DataInputStream dis = new DataInputStream(bis);) {
+
+      List<String> keys = new ArrayList<>();
+      long currentOffset = 0;
+      long currentBlockSize = 0;
+
+      while (dis.available() > 0) {
+        int startSize = dis.available();
+        String key = dis.readUTF();
+        String value = dis.readUTF();
+        int endSize = dis.available();
+
+        int bytesRead = endSize - startSize;
+        keys.add(key);
+
+        if (currentBlockSize == 0) {
+          sparseIndex.put(key, currentOffset);
+        }
+
+        currentOffset += bytesRead;
+        currentBlockSize += bytesRead;
+
+        if (currentBlockSize >= SPARSE_INDEX_OFFSET) {
+          currentBlockSize = 0;
+        }
+      }
+      this.bloomFilter = new BloomFilter(keys.size());
+      for (String key : keys) {
+        bloomFilter.add(key);
+      }
+
+    } catch (IOException exception) {
+      throw new RuntimeException(exception);
+    }
+  }}
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
