@@ -2,11 +2,16 @@ package com.lsm;
 
 import java.util.Scanner;
 
+import com.lsm.WriteAheadLog;
+
 public class Main {
   public static void main(String[] args) {
     MemTable db = new MemTable();
-
+    WriteAheadLog wal = new WriteAheadLog();
     Scanner scanner = new Scanner(System.in);
+
+    wal.restore(db);
+    wal.clear();
 
     System.out.println("Custom database has started!");
     System.out.println("Please choose among the available options");
@@ -34,6 +39,7 @@ public class Main {
           System.out.println("Please input value associated with your key");
           String value = scanner.nextLine();
 
+          wal.append("PUT", key, value);
           db.put(key, value);
           break;
         case "GET":
@@ -47,6 +53,7 @@ public class Main {
           System.out.println("What value do you want to delete. please give a key");
           String deleteKey = scanner.nextLine();
 
+          wal.append("DELETE", deleteKey, null);
           db.delete(deleteKey);
           break;
         case "STOP":

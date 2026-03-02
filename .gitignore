@@ -1,6 +1,9 @@
 # Compiled class file
 *.class
 
+#log file
+*.log
+
 # int file
 .idea
 *.sst
