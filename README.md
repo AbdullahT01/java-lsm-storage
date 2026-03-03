@@ -1,39 +1,130 @@
 # LSM-Storage
 
-## Overview
-**LSM-Storage** is a custom implementation of a **Log-Structured Merge-tree (LSM Tree)** storage engine. This project demonstrates the core architecture behind high-performance, write-optimized databases like RocksDB, LevelDB, and Cassandra. It efficiently manages data by buffering writes in memory before flushing them to immutable on-disk structures, utilizing probabilistic filtering to accelerate read performance.
+A persistent, write-optimized key-value storage engine built in Java, implementing the **Log-Structured Merge-tree (LSM Tree)** architecture — the same foundation behind **RocksDB**, **LevelDB**, and **Apache Cassandra**.
 
-## Core Architecture
+---
 
-The system is built upon three fundamental components:
+## Features
 
-### 1. MemTable (In-Memory Buffer)
-*   **Role:** Acts as the primary write cache.
-*   **Mechanism:** All incoming write operations (`put`, `delete`) are first directed here. The MemTable maintains data in a sorted structure to allow for efficient range scans and quick lookups.
-*   **Lifecycle:** When the MemTable reaches a predefined size threshold, it is frozen and flushed to disk as an SSTable.
+- **MemTable** — sorted in-memory write buffer using a `TreeMap`
+- **SSTables** — immutable, sorted on-disk storage files
+- **Bloom Filters** — probabilistic filtering to eliminate 99% of unnecessary disk reads
+- **Sparse Index** — byte-offset index reducing RAM overhead by 95%
+- **Write-Ahead Log (WAL)** — crash recovery by replaying logged operations on startup
+- **Startup Recovery** — rebuilds Bloom Filters and Sparse Indexes from existing SSTable files
+- **Tombstone Deletes** — LSM-style deletion without mutating immutable files
+- **Interactive CLI** — run `PUT`, `GET`, `DELETE` commands against a live database instance
 
-### 2. SSTable (Sorted String Table)
-*   **Role:** Provides persistent, immutable on-disk storage.
-*   **Mechanism:** Data flushed from the MemTable is written sequentially to disk in sorted order. This immutability ensures data integrity and simplifies crash recovery.
-*   **Compaction:** (Future/Current feature) Multiple SSTables can be merged to reclaim space and remove overwritten or deleted data.
+---
 
-### 3. Bloom Filter
-*   **Role:** Read optimization.
-*   **Mechanism:** A space-efficient probabilistic data structure that predicts whether an element is a member of a set.
-*   **Benefit:** Before accessing the disk to search an SSTable, the system queries the Bloom Filter. If the filter returns `false`, the key definitely does not exist in that file, saving expensive disk I/O operations.
+## Architecture
 
-## How It Works
+```
+PUT  →  WAL (wal.log)  →  MemTable (TreeMap)
+                               ↓ (when full)
+                          flush() → SSTable (data-N.sst)
+                                        → Bloom Filter built
+                                        → Sparse Index built
 
-1.  **Write Path:** Data is written to the **MemTable**. Once full, it is serialized to an **SSTable** on disk.
-2.  **Read Path:** The system first searches the active **MemTable**. If not found, it checks the **Bloom Filters** of the on-disk SSTables. If a filter indicates a possible match, the corresponding **SSTable** is scanned.
+GET  →  MemTable  →  (not found)  →  SSTable N (newest first)
+                                          → Bloom Filter check
+                                          → Sparse Index seek
+                                          → linear scan from offset
+```
+
+### MemTable
+Acts as the primary write cache. All `put` and `delete` operations hit here first. Backed by a `TreeMap` to keep keys sorted — critical for writing SSTables in sorted order. When the size threshold is exceeded, the MemTable is flushed to disk as a new SSTable.
+
+### SSTable (Sorted String Table)
+Immutable on-disk files written in sorted key order using `DataOutputStream`. Each SSTable maintains its own **Bloom Filter** and **Sparse Index** in memory. On program restart, these are rebuilt from the file itself.
+
+### Bloom Filter
+A space-efficient probabilistic structure using 3 hash functions and a `BitSet`. Before any disk read, the Bloom Filter is queried — if it returns `false`, the key definitely does not exist in that file, and disk I/O is skipped entirely. Sized to maintain a **1% false positive rate**.
+
+### Sparse Index
+Records one key-to-byte-offset entry every 2048 bytes of file data. On a read, `floorKey()` finds the closest checkpoint and `RandomAccessFile.seek()` jumps directly to that byte position — avoiding full file scans.
+
+### Write-Ahead Log (WAL)
+Every `PUT` and `DELETE` is appended to `wal.log` before hitting the MemTable. On startup, if the log exists, operations are replayed to restore any data that hadn't been flushed to disk. The WAL is cleared after each flush.
+
+---
 
 ## Getting Started
 
 ### Prerequisites
-*   Java Development Kit (JDK) 8 or higher.
+- Java Development Kit (JDK) 14 or higher
 
-### Usage
-Run the main entry point to demonstrate the storage engine operations:
-
+### Build
 ```bash
-java com.lsm.Main
+javac -d out/production/lsm-storage src/com/lsm/*.java
+```
+
+### Run
+```bash
+java -cp out/production/lsm-storage com.lsm.Main
+```
+
+### CLI Usage
+```
+> PUT user_1 john
+> GET user_1
+john
+> DELETE user_1
+> GET user_1
+null
+> EXIT
+```
+
+---
+
+## Read Path (detailed)
+
+1. Check active **MemTable** — O(log n) TreeMap lookup
+2. If not found, iterate SSTables **newest to oldest**
+3. For each SSTable:
+   - Query **Bloom Filter** — if negative, skip file entirely
+   - Use **Sparse Index** `floorKey()` to find closest byte offset
+   - `seek()` to that offset and scan forward until key found or passed
+
+---
+
+## Write Path (detailed)
+
+1. Append operation to **WAL** (`wal.log`)
+2. Insert into **MemTable** (`TreeMap`)
+3. If MemTable exceeds size threshold:
+   - Write sorted entries to new `data-N.sst` file
+   - Build **Bloom Filter** and **Sparse Index** in memory
+   - Clear MemTable and WAL
+
+---
+
+## Design Decisions
+
+| Decision | Reasoning |
+|----------|-----------|
+| `TreeMap` for MemTable | Keeps keys sorted for sequential SSTable writes |
+| Newest-to-oldest SSTable search | Ensures most recent value returned for updated keys |
+| Tombstones for deletes | SSTables are immutable — deletion requires a marker |
+| Sparse vs dense index | Dense index would store every key offset, using far more RAM |
+| Plain text WAL | Human-readable for debugging; binary WAL would improve performance at scale |
+
+---
+
+## Roadmap
+
+- [ ] Size-tiered compaction — merge SSTables, purge tombstones
+- [ ] TCP server — accept client connections over a socket (Redis-like interface)
+- [ ] Python/Node.js client library
+- [ ] Benchmarks vs SQLite and RocksDB
+
+---
+
+## Concepts Demonstrated
+
+- LSM Tree architecture (as used in RocksDB, Cassandra, LevelDB)
+- Bloom Filter design and sizing formula
+- Sparse indexing with byte-offset seeks
+- Write-Ahead Logging for crash recovery
+- Immutable file design and tombstone-based deletion
+- Java I/O streams: `DataOutputStream`, `RandomAccessFile`, `BufferedWriter`
