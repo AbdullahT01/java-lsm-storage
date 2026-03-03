@@ -3,15 +3,19 @@ package com.lsm;
 import java.util.Scanner;
 
 import com.lsm.WriteAheadLog;
+import com.lsm.Compaction;
 
 public class Main {
   public static void main(String[] args) {
     MemTable db = new MemTable();
     WriteAheadLog wal = new WriteAheadLog();
     Scanner scanner = new Scanner(System.in);
+    Compaction compactor = new Compaction();
 
     wal.restore(db);
     wal.clear();
+
+    compactor.compact();
 
     System.out.println("Custom database has started!");
     System.out.println("Please choose among the available options");
