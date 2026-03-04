@@ -32,6 +32,16 @@ public class Server {
       BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
       PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
 
+      // send menu to client
+      out.println("Custom database has started!");
+      out.println("Please choose among the available options");
+      out.println("*****************************************");
+      out.println("* PUT                                   *");
+      out.println("* GET                                   *");
+      out.println("* DELETE                                *");
+      out.println("* STOP                                  *");
+      out.println("*****************************************");
+
       String command;
       while ((command = in.readLine()) != null) {
 

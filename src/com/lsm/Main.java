@@ -15,6 +15,7 @@ public class Main {
     compactor.compact(db);
 
     Server server = new Server(db, wal);
+
     try {
       server.start();
     } catch (IOException e) {
