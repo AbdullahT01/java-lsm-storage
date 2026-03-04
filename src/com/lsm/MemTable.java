@@ -113,4 +113,11 @@ public class MemTable {
     }
   }
 
+  public void resetSSTables() {
+    sstables.clear();
+  }
+
+  public void addSSTable(SSTable sst) {
+    sstables.add(sst);
+  }
 }

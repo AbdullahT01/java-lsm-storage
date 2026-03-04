@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.TreeMap;
 
+import com.lsm.MemTable;
 import com.lsm.SSTable;
 
 import java.io.*;
@@ -17,7 +18,7 @@ public class Compaction {
     // just wanted to keep pattern of calling constructor
   }
 
-  public void compact() {
+  public void compact(MemTable memTable) {
     File dir = new File(".");
 
     // we need to Override because the list file function takes
@@ -101,6 +102,11 @@ public class Compaction {
 
     if (tempFile.renameTo(finalFile)) {
       System.out.println("Compaction completely successful! Merged into data-0.sst");
+
+      memTable.resetSSTables();
+      SSTable compacted = new SSTable("data-0.sst");
+      compacted.loadFromDisk();
+      memTable.addSSTable(compacted);
     } else {
       System.out.println("Failed to rename temporary compaction file.");
     }

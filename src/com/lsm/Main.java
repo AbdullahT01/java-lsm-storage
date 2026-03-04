@@ -15,7 +15,7 @@ public class Main {
     wal.restore(db);
     wal.clear();
 
-    compactor.compact();
+    compactor.compact(db);
 
     System.out.println("Custom database has started!");
     System.out.println("Please choose among the available options");
