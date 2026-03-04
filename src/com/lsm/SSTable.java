@@ -12,6 +12,7 @@ public class SSTable {
   private String fileName;
   private BloomFilter bloomFilter;
   private static final int SPARSE_INDEX_OFFSET = 2048;
+  private RandomAccessFile raf;
 
   public SSTable(String fileName) {
     this.fileName = fileName;
@@ -84,8 +85,10 @@ public class SSTable {
       return null;
     }
 
-    try (
-        RandomAccessFile raf = new RandomAccessFile(fileName, "r");) {
+    try {
+      if (raf == null) {
+        raf = new RandomAccessFile(fileName, "r");
+      }
       String closestKey = sparseIndex.floorKey(key);
       if (closestKey == null) {
         return null; // The key is smaller than the first item in the file, so it doesn't exist.

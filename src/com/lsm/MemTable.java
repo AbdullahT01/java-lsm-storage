@@ -44,19 +44,19 @@ public class MemTable {
     if (result != null) {
 
       if (result.equals("TOMBSTONE")) {
-        System.out.println("value is not inside the database");
+        // System.out.println("value is not inside the database");
         return null;
       } else {
-        System.out.println("Value was found");
+        // System.out.println("Value was found");
       }
 
-      System.out.println("found the value in the memtable");
+      // System.out.println("found the value in the memtable");
     } else {
       for (int i = sstables.size() - 1; i >= 0; i--) {
         result = sstables.get(i).getValue(key);
 
         if (result != null && !result.equals("TOMBSTONE")) {
-          System.out.println("found the value in sst table: ");
+          // System.out.println("found the value in sst table: ");
           break;
         }
       }
@@ -64,8 +64,8 @@ public class MemTable {
 
     long endTime = System.nanoTime();
     float durationInMs = ((endTime) - startTime) / 1000000.0f;
-    System.out.println();
-    System.out.println("Time to retrieve value ---> " + durationInMs + "ms");
+    // System.out.println();
+    // System.out.println("Time to retrieve value ---> " + durationInMs + "ms");
     return result;
   }
 
