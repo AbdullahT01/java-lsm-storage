@@ -132,7 +132,7 @@ public class SSTable {
         String value = dis.readUTF();
         int endSize = dis.available();
 
-        int bytesRead = endSize - startSize;
+        int bytesRead = startSize - endSize;
         keys.add(key);
 
         if (currentBlockSize == 0) {
